@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# 使用Vue3 + Element-plus 返回
+
+-  所有的依赖请使用pnpm安装
+-  请返回中文
