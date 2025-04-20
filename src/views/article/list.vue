@@ -56,7 +56,7 @@
             <el-pagination
                 background
                 layout="total, prev, pager, next"
-                :current-page="queryParams.pageIndex"
+                :current-page="queryParams.page"
                 :page-size="queryParams.pageSize"
                 :total="pageTotal"
                 @current-change="handlePageChange"
@@ -66,10 +66,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, Edit, Search, Plus } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
+import { getArticleList, deleteArticle, ArticleQueryParams, ArticleData } from '@/api/article';
 
 interface TableItem {
     id: number;
@@ -85,12 +86,12 @@ interface TableItem {
 const router = useRouter();
 
 // 查询条件
-const queryParams = reactive({
+const queryParams = reactive<ArticleQueryParams>({
     keyword: '',
     status: '',
     source: '',
     dateRange: [],
-    pageIndex: 1,
+    page: 1,
     pageSize: 10
 });
 
@@ -108,38 +109,53 @@ const pageTotal = ref(0);
 // 选中的行
 const multipleSelection = ref<TableItem[]>([]);
 
+// 是否为开发环境
+const isDev = computed(() => {
+    return import.meta.env.DEV;
+});
+
 // 获取表格数据
-const getData = () => {
-    // TODO: 调用后端API获取数据
-    // 这里是模拟数据
-    tableData.value = [
-        {
-            id: 1,
-            title: '示例文章标题',
-            source: '网站A',
-            collectTime: '2024-04-05 10:00:00',
-            updateTime: '2024-04-06 15:30:00',
-            readCount: 100,
-            status: 'published',
-            publishTime: '2024-04-05 12:00:00'
-        },
-        {
-            id: 2,
-            title: '这是一个非常长的文章标题，用于测试当标题文本超出列宽度时的省略号显示效果和鼠标悬停时的tooltip提示功能，确保UI显示美观',
-            source: '网站B',
-            collectTime: '2024-04-06 09:15:00',
-            updateTime: '2024-04-07 14:20:00',
-            readCount: 235,
-            status: 'deleted',
-            publishTime: '2024-04-06 10:00:00'
+const getData = async () => {
+    try {
+        console.log('发送请求参数:', queryParams);
+        const response: any = await getArticleList(queryParams);
+        console.log('API返回原始数据:', response);
+        
+        // 从response对象中获取实际的数据
+        const res = response.data;
+        console.log('处理后的数据:', res);
+        
+        if (res.success) {
+            console.log('请求成功，数据列表:', res.data.list);
+            // 将API返回的数据转换为页面TableItem格式
+            tableData.value = res.data.list.map((item: any) => {
+                console.log('处理单条数据:', item);
+                return {
+                    id: item.id,
+                    title: item.title,
+                    source: item.source,
+                    collectTime: item.collect_time,
+                    updateTime: item.update_time,
+                    readCount: item.read_count,
+                    status: item.status,
+                    publishTime: item.publish_time
+                };
+            });
+            console.log('转换后的表格数据:', tableData.value);
+            pageTotal.value = res.data.total;
+        } else {
+            console.error('请求失败，错误信息:', res.message);
+            ElMessage.error(res.message || '获取数据失败');
         }
-    ];
-    pageTotal.value = 100;
+    } catch (error) {
+        console.error('获取文章列表出现异常:', error);
+        ElMessage.error('获取文章列表失败');
+    }
 };
 
 // 搜索
 const handleSearch = () => {
-    queryParams.pageIndex = 1;
+    queryParams.page = 1;
     getData();
 };
 
@@ -158,10 +174,22 @@ const handleDelete = (row: TableItem) => {
     ElMessageBox.confirm('确定要删除该文章吗？', '提示', {
         type: 'warning'
     })
-        .then(() => {
-            // TODO: 调用删除API
-            ElMessage.success('删除成功');
-            getData();
+        .then(async () => {
+            try {
+                const response: any = await deleteArticle(row.id);
+                const res = response.data;
+                console.log('删除操作响应:', res);
+                
+                if (res.success) {
+                    ElMessage.success('删除成功');
+                    getData();
+                } else {
+                    ElMessage.error(res.message || '删除失败');
+                }
+            } catch (error) {
+                console.error('删除文章失败:', error);
+                ElMessage.error('删除文章失败');
+            }
         })
         .catch(() => {});
 };
@@ -173,12 +201,14 @@ const handleSelectionChange = (val: TableItem[]) => {
 
 // 分页导航
 const handlePageChange = (val: number) => {
-    queryParams.pageIndex = val;
+    queryParams.page = val;
     getData();
 };
 
 // 初始化数据
-getData();
+onMounted(() => {
+    getData();
+});
 </script>
 
 <style scoped>
