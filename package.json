@@ -9,11 +9,13 @@
 	},
 	"dependencies": {
 		"@element-plus/icons-vue": "*",
+		"@types/crypto-js": "^4.2.2",
 		"@vueup/vue-quill": "^1.2.0",
 		"@wangeditor/editor": "^5.1.23",
 		"@wangeditor/editor-for-vue": "^5.1.12",
 		"axios": "^1.6.3",
 		"countup.js": "^2.8.0",
+		"crypto-js": "^4.2.0",
 		"echarts": "^5.5.0",
 		"echarts-wordcloud": "^2.1.0",
 		"element-plus": "^2.6.3",

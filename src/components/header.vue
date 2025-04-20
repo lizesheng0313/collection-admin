@@ -36,11 +36,11 @@
                     </el-tooltip>
                 </div>
                 <!-- 用户头像 -->
-                <el-avatar class="user-avator" :size="30" :src="imgurl" />
+                <el-avatar class="user-avator" :size="30" :src="userInfo.avatar || imgurl" />
                 <!-- 用户名下拉菜单 -->
                 <el-dropdown class="user-name" trigger="click" @command="handleCommand">
                     <span class="el-dropdown-link">
-                        {{ username }}
+                        {{ userInfo.nickname || username }}
                         <el-icon class="el-icon--right">
                             <arrow-down />
                         </el-icon>
@@ -63,15 +63,26 @@
     </div>
 </template>
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { useSidebarStore } from '../store/sidebar';
 import { useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import imgurl from '../assets/img/img.jpg';
+import { apiLogout } from '../api/auth';
 
-const username: string | null = localStorage.getItem('vuems_name');
+const username: string | null = localStorage.getItem('vuems_name') || '用户';
 const message: number = 2;
 
+// 用户信息
+const userInfo = reactive({
+    avatar: '',
+    nickname: '',
+    email: ''
+});
+
+// 侧边栏状态
 const sidebar = useSidebarStore();
+
 // 侧边栏折叠
 const collapseChage = () => {
     sidebar.handleCollapse();
@@ -81,14 +92,55 @@ onMounted(() => {
     if (document.body.clientWidth < 1500) {
         collapseChage();
     }
+    
+    // 获取存储的用户信息
+    const userStr = localStorage.getItem('vuems_user');
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            userInfo.avatar = user.avatar || '';
+            userInfo.nickname = user.nickname || '';
+            userInfo.email = user.email || '';
+        } catch (e) {
+            console.error('解析用户信息失败', e);
+        }
+    }
 });
 
 // 用户名下拉菜单选择事件
 const router = useRouter();
-const handleCommand = (command: string) => {
+const handleCommand = async (command: string) => {
     if (command == 'loginout') {
-        localStorage.removeItem('vuems_name');
-        router.push('/login');
+        try {
+            await ElMessageBox.confirm(
+                '确定要退出登录吗？',
+                '提示',
+                {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning',
+                }
+            );
+            
+            // 调用登出API
+            try {
+                await apiLogout();
+            } catch (err) {
+                console.error('登出API调用失败', err);
+            }
+            
+            // 清除本地存储的登录信息
+            localStorage.removeItem('vuems_name');
+            localStorage.removeItem('vuems_token');
+            localStorage.removeItem('vuems_user');
+            
+            ElMessage.success('已成功退出登录');
+            
+            // 跳转到登录页
+            router.push('/login');
+        } catch {
+            // 用户取消操作
+        }
     } else if (command == 'user') {
         router.push('/ucenter');
     }

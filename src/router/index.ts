@@ -15,11 +15,21 @@ import AIStyle from '../views/ai/style.vue';
 import AIBatch from '../views/ai/batch.vue';
 import ModelList from '../views/model/list.vue';
 import NotFound from '../views/pages/404.vue';
+import Login from '../views/login/index.vue';
+
 
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
         redirect: '/dashboard',
+    },
+    {
+        path: '/login',
+        name: 'Login',
+        meta: {
+            title: '登录',
+        },
+        component: Login,
     },
     {
         path: '/',
@@ -132,6 +142,7 @@ const routes: RouteRecordRaw[] = [
             }
         ],
     },
+    
     {
         path: '/404',
         meta: {
@@ -149,7 +160,19 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     NProgress.start();
-    next();
+    
+    // 设置页面标题
+    document.title = `${to.meta.title || '后台管理系统'}`;
+    
+    // 检查登录状态
+    const token = localStorage.getItem('vuems_token');
+    
+    if (!token && to.path !== '/login') {
+        // 未登录且访问非登录页面，重定向到登录页
+        next({ path: '/login' });
+    } else {
+        next();
+    }
 });
 
 router.afterEach(() => {

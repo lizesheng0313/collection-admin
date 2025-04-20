@@ -1,20 +1,21 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 import type { AxiosResponse } from 'axios';
-import type { ApiResponse } from './article';
+import type { AuthApiResponse } from './auth';
 
 // 配置axios默认值
 axios.defaults.timeout = 10000; // 超时时间
 axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '/api';
 
 // 请求拦截器
 axios.interceptors.request.use(
   config => {
-    // 可以在这里添加token等请求头
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    // 添加token到请求头
+    const token = localStorage.getItem('vuems_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   error => {
@@ -44,7 +45,11 @@ axios.interceptors.response.use(
       switch (response.status) {
         case 401:
           ElMessage.error('未授权，请重新登录');
-          // 可以在这里处理登录过期逻辑
+          // 处理登录过期逻辑
+          localStorage.removeItem('vuems_token');
+          localStorage.removeItem('vuems_name');
+          localStorage.removeItem('vuems_user');
+          window.location.href = '/#/login';
           break;
         case 403:
           ElMessage.error('拒绝访问');
@@ -66,6 +71,7 @@ axios.interceptors.response.use(
 );
 
 // 导出所有API
+export * from './auth';
 export * from './article';
 
 export default axios;
