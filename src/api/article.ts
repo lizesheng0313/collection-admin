@@ -1,4 +1,4 @@
-import axios from 'axios';
+import request from '../utils/request';
 
 // 文章列表接口参数类型
 export interface ArticleQueryParams {
@@ -54,7 +54,7 @@ export interface PageResult<T> {
 // 获取文章列表
 export function getArticleList(params: ArticleQueryParams) {
   console.log('调用获取文章列表API，参数:', params);
-  return axios.get<ApiResponse<PageResult<ArticleData>>>('/api/articles', { params })
+  return request.get<ApiResponse<PageResult<ArticleData>>>('/api/articles', { params })
     .then(res => {
       console.log('获取文章列表API原始响应:', res);
       return res;
@@ -67,20 +67,20 @@ export function getArticleList(params: ArticleQueryParams) {
 
 // 获取文章详情
 export function getArticleDetail(id: number) {
-  return axios.get<ApiResponse<ArticleData>>(`/api/articles/${id}`);
+  return request.get<ApiResponse<ArticleData>>(`/api/articles/${id}`);
 }
 
 // 创建文章
 export function createArticle(data: ArticleData) {
-  return axios.post<ApiResponse<ArticleData>>('/api/articles', data);
+  return request.post<ApiResponse<ArticleData>>('/api/articles', data);
 }
 
 // 更新文章
 export function updateArticle(id: number, data: ArticleData) {
-  return axios.put<ApiResponse<ArticleData>>(`/api/articles/${id}`, data);
+  return request.put<ApiResponse<ArticleData>>(`/api/articles/${id}`, data);
 }
 
 // 删除文章
 export function deleteArticle(id: number) {
-  return axios.delete<ApiResponse<null>>(`/api/articles/${id}`);
+  return request.delete<ApiResponse<null>>(`/api/articles/${id}`);
 } 

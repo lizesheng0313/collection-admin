@@ -121,8 +121,8 @@ const getData = async () => {
         const response: any = await getArticleList(queryParams);
         console.log('API返回原始数据:', response);
         
-        // 从response对象中获取实际的数据
-        const res = response.data;
+        // 直接使用response，不需要再取response.data
+        const res = response;
         console.log('处理后的数据:', res);
         
         if (res.success) {
@@ -177,7 +177,7 @@ const handleDelete = (row: TableItem) => {
         .then(async () => {
             try {
                 const response: any = await deleteArticle(row.id);
-                const res = response.data;
+                const res = response;
                 console.log('删除操作响应:', res);
                 
                 if (res.success) {

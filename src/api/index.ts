@@ -6,7 +6,7 @@ import type { AuthApiResponse } from './auth';
 // 配置axios默认值
 axios.defaults.timeout = 10000; // 超时时间
 axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8';
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || '/api';
+axios.defaults.baseURL = ''; // 清空baseURL，使用request.ts中的配置
 
 // 请求拦截器
 axios.interceptors.request.use(
@@ -15,6 +15,7 @@ axios.interceptors.request.use(
     const token = localStorage.getItem('vuems_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('axios全局请求添加了Authorization头', config.url);
     }
     return config;
   },
@@ -28,10 +29,28 @@ axios.interceptors.response.use(
   (response: AxiosResponse) => {
     // 添加详细日志
     console.log('响应拦截器收到响应:', response.status, response.config.url);
-    console.log('响应数据:', response.data);
     
-    // 直接返回响应数据，不做额外处理
-    return response.data;
+    const res = response.data;
+    
+    // 如果响应中包含错误码
+    if (res.code && res.code !== 200) {
+      // 未登录或token过期
+      if (res.code === 401) {
+        ElMessage.error(res.message || '未登录或登录已过期，请重新登录');
+        localStorage.removeItem('vuems_token');
+        localStorage.removeItem('vuems_name');
+        localStorage.removeItem('vuems_user');
+        
+        window.location.href = '/#/login';
+        return Promise.reject(new Error(res.message));
+      }
+      
+      ElMessage.error(res.message || '请求失败');
+      return Promise.reject(new Error(res.message || '未知错误'));
+    }
+    
+    // 直接返回响应数据
+    return res;
   },
   error => {
     console.error('响应拦截器捕获错误:', error);

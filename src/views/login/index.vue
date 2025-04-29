@@ -101,7 +101,9 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
                 
                 // 判断登录是否成功
                 if (res.code === 200) {
-                    // 保存token和用户信息
+                    console.log('登录成功，获取到的数据:', res.data);
+                    
+                    // 先保存token到localStorage（确保授权请求头在后续请求中可用）
                     const { token, userInfo } = res.data;
                     localStorage.setItem('vuems_token', token);
                     localStorage.setItem('vuems_name', userInfo.username);
@@ -122,7 +124,9 @@ const handleLogin = async (formEl: FormInstance | undefined) => {
                     ElMessage.success('登录成功');
                     
                     // 登录成功后跳转到首页
-                    router.push('/');
+                    setTimeout(() => {
+                        router.push('/');
+                    }, 500);
                 } else {
                     ElMessage.error(res.message || '登录失败，请检查用户名和密码');
                 }
