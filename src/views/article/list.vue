@@ -109,6 +109,21 @@ const pageTotal = ref(0);
 // 选中的行
 const multipleSelection = ref<TableItem[]>([]);
 
+// 格式化时间
+const formatDateTime = (dateTimeStr: string | null | undefined) => {
+    if (!dateTimeStr) return '-';
+    const date = new Date(dateTimeStr);
+    return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).replace(/\//g, '-');
+};
+
 // 是否为开发环境
 const isDev = computed(() => {
     return import.meta.env.DEV;
@@ -117,39 +132,26 @@ const isDev = computed(() => {
 // 获取表格数据
 const getData = async () => {
     try {
-        console.log('发送请求参数:', queryParams);
-        const response: any = await getArticleList(queryParams);
-        console.log('API返回原始数据:', response);
-        
-        // 直接使用response，不需要再取response.data
-        const res = response;
-        console.log('处理后的数据:', res);
+        const res = await getArticleList(queryParams);
         
         if (res.success) {
-            console.log('请求成功，数据列表:', res.data.list);
             // 将API返回的数据转换为页面TableItem格式
             tableData.value = res.data.list.map((item: any) => {
-                console.log('处理单条数据:', item);
                 return {
                     id: item.id,
                     title: item.title,
                     source: item.source,
-                    collectTime: item.collect_time,
-                    updateTime: item.update_time,
+                    collectTime: formatDateTime(item.collect_time),
+                    updateTime: formatDateTime(item.update_time),
                     readCount: item.read_count,
                     status: item.status,
-                    publishTime: item.publish_time
+                    publishTime: formatDateTime(item.publish_time)
                 };
             });
-            console.log('转换后的表格数据:', tableData.value);
             pageTotal.value = res.data.total;
-        } else {
-            console.error('请求失败，错误信息:', res.message);
-            ElMessage.error(res.message || '获取数据失败');
-        }
+        } 
     } catch (error) {
-        console.error('获取文章列表出现异常:', error);
-        ElMessage.error('获取文章列表失败');
+        // 全局处理错误
     }
 };
 
@@ -175,20 +177,11 @@ const handleDelete = (row: TableItem) => {
         type: 'warning'
     })
         .then(async () => {
-            try {
-                const response: any = await deleteArticle(row.id);
-                const res = response;
-                console.log('删除操作响应:', res);
-                
-                if (res.success) {
-                    ElMessage.success('删除成功');
-                    getData();
-                } else {
-                    ElMessage.error(res.message || '删除失败');
-                }
-            } catch (error) {
-                console.error('删除文章失败:', error);
-                ElMessage.error('删除文章失败');
+            const res = await deleteArticle(row.id);
+            
+            if (res.success) {
+                ElMessage.success('删除成功');
+                getData();
             }
         })
         .catch(() => {});

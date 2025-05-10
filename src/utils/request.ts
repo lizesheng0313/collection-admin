@@ -33,9 +33,11 @@ service.interceptors.response.use(
         
         // 如果后端直接返回了错误码，比如code=401
         if (res.code && res.code !== 200) {
+            // 显示后端返回的错误信息
+            ElMessage.error(res.message);
+            
             // 未登录或token过期
             if (res.code === 401) {
-                ElMessage.error(res.message || '未登录或登录已过期，请重新登录');
                 // 清除本地存储的登录信息
                 localStorage.removeItem('vuems_token');
                 localStorage.removeItem('vuems_name');
@@ -45,13 +47,10 @@ service.interceptors.response.use(
                 setTimeout(() => {
                     window.location.href = '/#/login';
                 }, 1500);
-                
-                return Promise.reject(new Error(res.message || '未登录或登录已过期'));
             }
             
-            // 其他业务错误
-            ElMessage.error(res.message || '请求失败');
-            return Promise.reject(new Error(res.message || '未知错误'));
+            // 仅拒绝Promise，不传递具体错误信息
+            return Promise.reject();
         }
         
         // 正常返回数据
@@ -60,35 +59,28 @@ service.interceptors.response.use(
     (error: AxiosError) => {
         console.error('请求错误', error);
         
-        // HTTP状态码错误处理
+        // 处理HTTP错误
         if (error.response) {
-            const status = error.response.status;
+            // 显示后端返回的错误信息
+            const responseData = error.response.data as any;
+            if (responseData && responseData.message) {
+                ElMessage.error(responseData.message);
+            }
             
-            switch (status) {
-                case 401:
-                    ElMessage.error('未授权，请重新登录');
-                    localStorage.removeItem('vuems_token');
-                    localStorage.removeItem('vuems_name');
-                    localStorage.removeItem('vuems_user');
-                    window.location.href = '/#/login';
-                    break;
-                case 403:
-                    ElMessage.error('拒绝访问');
-                    break;
-                case 404:
-                    ElMessage.error('请求的资源不存在');
-                    break;
-                case 500:
-                    ElMessage.error('服务器错误');
-                    break;
-                default:
-                    ElMessage.error(`请求错误(${status})`);
+            // 处理401未授权
+            if (error.response.status === 401) {
+                localStorage.removeItem('vuems_token');
+                localStorage.removeItem('vuems_name');
+                localStorage.removeItem('vuems_user');
+                window.location.href = '/#/login';
             }
         } else {
-            ElMessage.error('网络连接异常，请稍后重试');
+            // 网络错误
+            ElMessage.error('网络请求失败');
         }
         
-        return Promise.reject(error);
+        // 仅拒绝Promise，不传递具体错误信息
+        return Promise.reject();
     }
 );
 

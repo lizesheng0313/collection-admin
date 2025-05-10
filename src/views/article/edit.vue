@@ -3,33 +3,57 @@
         <div class="header">
             <h1>{{ isEdit ? '编辑文章' : '新增文章' }}</h1>
             <div class="button-group">
-                <el-button type="primary" @click="saveArticle">{{ isEdit ? '保存' : '发布' }}</el-button>
+                <el-button type="primary" :loading="loading" @click="saveArticle">{{ isEdit ? '保存' : '发布' }}</el-button>
                 <el-button @click="goBack">返回</el-button>
             </div>
         </div>
 
         <div class="content-wrapper">
             <div class="form-fields">
-                <div class="form-item">
-                    <span class="label">*标题</span>
-                    <el-input v-model="articleForm.title" placeholder="示例文章标题" class="input-field"></el-input>
-                </div>
-                <div class="form-item">
-                    <span class="label">*来源</span>
-                    <el-input v-model="articleForm.source" placeholder="网站A" class="input-field"></el-input>
-                </div>
-                <div class="form-item editor-form-item">
-                    <span class="label">*内容</span>
-                    <div class="editor-wrapper">
-                        <QuillEditor
-                            v-model:content="articleForm.content" 
-                            content-type="html" 
-                            toolbar="full" 
-                            theme="snow"
-                            class="editor"
-                        />
+                <el-form ref="formRef" :model="articleForm" :rules="rules" label-width="0">
+                    <div class="form-item">
+                        <span class="label">*标题</span>
+                        <el-form-item prop="title" class="input-field">
+                            <el-input v-model="articleForm.title" placeholder="文章标题" class="input-field"></el-input>
+                        </el-form-item>
                     </div>
-                </div>
+                    <div class="form-item">
+                        <span class="label">*来源</span>
+                        <el-form-item prop="source" class="input-field">
+                            <el-input v-model="articleForm.source" placeholder="网站来源" class="input-field"></el-input>
+                        </el-form-item>
+                    </div>
+                    <div class="form-item" v-if="isEdit">
+                        <span class="label">收集</span>
+                        <div class="input-field">
+                            <el-text>{{ formatDateTime(articleForm.collect_time) }}</el-text>
+                        </div>
+                    </div>
+                    <div class="form-item" v-if="isEdit">
+                        <span class="label">发布</span>
+                        <div class="input-field">
+                            <el-text>{{ formatDateTime(articleForm.publish_time) }}</el-text>
+                        </div>
+                    </div>
+                    <div class="form-item" v-if="isEdit">
+                        <span class="label">阅读</span>
+                        <div class="input-field">
+                            <el-text>{{ articleForm.read_count || 0 }}</el-text>
+                        </div>
+                    </div>
+                    <div class="form-item editor-form-item">
+                        <span class="label">*内容</span>
+                        <el-form-item prop="content" class="editor-wrapper">
+                            <QuillEditor
+                                v-model:content="articleForm.content" 
+                                content-type="html" 
+                                toolbar="full" 
+                                theme="snow"
+                                class="editor"
+                            />
+                        </el-form-item>
+                    </div>
+                </el-form>
             </div>
         </div>
     </div>
@@ -41,22 +65,41 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
+import { getArticleDetail, createArticle, updateArticle, ArticleData, ApiResponse } from '@/api/article';
 
 const route = useRoute();
 const router = useRouter();
 const formRef = ref();
+const loading = ref(false);
 
 // 判断是新增还是编辑
 const isEdit = computed(() => route.params.id !== undefined);
 
 // 文章表单
 const articleForm = reactive({
-    id: '',
+    id: 0,
     title: '',
     source: '',
     content: '',
-    status: 'published' // 默认为已发布状态
+    collect_time: '',
+    publish_time: '',
+    read_count: 0
 });
+
+// 格式化时间
+const formatDateTime = (dateTimeStr: string | null | undefined) => {
+    if (!dateTimeStr) return '-';
+    const date = new Date(dateTimeStr);
+    return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).replace(/\//g, '-');
+};
 
 // 表单验证规则
 const rules = {
@@ -66,21 +109,22 @@ const rules = {
 };
 
 // 获取文章详情
-const getArticleDetail = async (id: string) => {
+const getArticleData = async (id: string) => {
     try {
-        // TODO: 调用后端API获取文章详情
-        // 模拟数据
-        const result = {
-            id: id,
-            title: '示例文章标题',
-            source: '网站A',
-            content: '<p>这是文章内容</p>',
-            status: 'published'
-        };
-        Object.assign(articleForm, result);
-    } catch (error) {
-        console.error('获取文章详情失败', error);
-        ElMessage.error('获取文章详情失败');
+        loading.value = true;
+        const res = await getArticleDetail(parseInt(id));
+        if (res && res.success) {
+            // 后端返回的字段名与前端表单字段名可能不同，需要转换
+            articleForm.id = res.data.id;
+            articleForm.title = res.data.title;
+            articleForm.source = res.data.source;
+            articleForm.content = res.data.content;
+            articleForm.collect_time = res.data.collect_time;
+            articleForm.publish_time = res.data.publish_time;
+            articleForm.read_count = res.data.read_count;
+        }
+    } finally {
+        loading.value = false;
     }
 };
 
@@ -88,16 +132,34 @@ const getArticleDetail = async (id: string) => {
 const saveArticle = async () => {
     if (!formRef.value) return;
     
-    await formRef.value.validate(async (valid: boolean) => {
-        if (valid) {
-            try {
-                // TODO: 调用后端API保存文章
-                ElMessage.success(isEdit.value ? '编辑成功' : '发布成功');
-                goBack();
-            } catch (error) {
-                console.error('保存文章失败', error);
-                ElMessage.error('保存文章失败');
+    formRef.value.validate(async (valid: boolean) => {
+        if (!valid) return;
+        
+        try {
+            loading.value = true;
+            
+            // 准备提交数据
+            const submitData: Partial<ArticleData> = {
+                title: articleForm.title,
+                source: articleForm.source,
+                content: articleForm.content
+            };
+            
+            let res;
+            if (isEdit.value && route.params.id) {
+                // 编辑文章
+                res = await updateArticle(parseInt(route.params.id as string), submitData as ArticleData);
+            } else {
+                // 新增文章
+                res = await createArticle(submitData as ArticleData);
             }
+            
+            if (res && res.success) {
+                ElMessage.success(isEdit.value ? '文章更新成功' : '文章发布成功');
+                goBack();
+            }
+        } finally {
+            loading.value = false;
         }
     });
 };
@@ -110,7 +172,7 @@ const goBack = () => {
 // 初始化
 onMounted(() => {
     if (isEdit.value && route.params.id) {
-        getArticleDetail(route.params.id as string);
+        getArticleData(route.params.id as string);
     }
 });
 </script>
@@ -181,6 +243,7 @@ onMounted(() => {
 
 .input-field {
     flex: 1;
+    margin-bottom: 0 !important;
 }
 
 .editor-wrapper {
@@ -189,6 +252,7 @@ onMounted(() => {
     border-radius: 4px;
     display: flex;
     flex-direction: column;
+    margin-bottom: 0 !important;
 }
 
 .editor {
@@ -217,5 +281,11 @@ onMounted(() => {
 
 :deep(.ql-toolbar.ql-snow) {
     padding: 4px;
+}
+
+:deep(.el-form-item__error) {
+    position: absolute;
+    top: 100%;
+    left: 0;
 }
 </style> 

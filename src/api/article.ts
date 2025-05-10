@@ -53,34 +53,25 @@ export interface PageResult<T> {
 
 // 获取文章列表
 export function getArticleList(params: ArticleQueryParams) {
-  console.log('调用获取文章列表API，参数:', params);
-  return request.get<ApiResponse<PageResult<ArticleData>>>('/api/articles', { params })
-    .then(res => {
-      console.log('获取文章列表API原始响应:', res);
-      return res;
-    })
-    .catch(err => {
-      console.error('获取文章列表API错误:', err);
-      throw err;
-    });
+  return request.get<any, ApiResponse<PageResult<ArticleData>>>('/api/articles/list', { params });
 }
 
 // 获取文章详情
 export function getArticleDetail(id: number) {
-  return request.get<ApiResponse<ArticleData>>(`/api/articles/${id}`);
+  return request.get<any, ApiResponse<ArticleData>>(`/api/articles/detail/${id}?no_read=1`);
 }
 
 // 创建文章
 export function createArticle(data: ArticleData) {
-  return request.post<ApiResponse<ArticleData>>('/api/articles', data);
+  return request.post<any, ApiResponse<ArticleData>>('/api/articles/create', data);
 }
 
 // 更新文章
 export function updateArticle(id: number, data: ArticleData) {
-  return request.put<ApiResponse<ArticleData>>(`/api/articles/${id}`, data);
+  return request.post<any, ApiResponse<ArticleData>>(`/api/articles/edit/${id}`, data);
 }
 
 // 删除文章
 export function deleteArticle(id: number) {
-  return request.delete<ApiResponse<null>>(`/api/articles/${id}`);
+  return request.post<any, ApiResponse<null>>(`/api/articles/delete/${id}`);
 } 
