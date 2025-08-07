@@ -14,6 +14,7 @@ import AIModel from '../views/ai/model.vue';
 import AIStyle from '../views/ai/style.vue';
 import AIBatch from '../views/ai/batch.vue';
 import ModelList from '../views/model/list.vue';
+import GitHubProjects from '../views/github/index.vue';
 import NotFound from '../views/pages/404.vue';
 import Login from '../views/login/index.vue';
 
