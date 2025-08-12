@@ -215,7 +215,7 @@ const getData = async () => {
                 return {
                     id: item.id,
                     title: item.title,
-                    source: item.source,
+                    source: item.article_type,
                     collectTime: formatDateTime(item.collect_time),
                     updateTime: formatDateTime(item.update_time),
                     readCount: item.read_count,
